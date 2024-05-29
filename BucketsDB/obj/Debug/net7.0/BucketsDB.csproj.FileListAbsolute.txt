@@ -1,0 +1,12 @@
+E:\CSharp\BucketsDB\BucketsDB\bin\Debug\net7.0\BucketsDB.deps.json
+E:\CSharp\BucketsDB\BucketsDB\bin\Debug\net7.0\BucketsDB.dll
+E:\CSharp\BucketsDB\BucketsDB\bin\Debug\net7.0\BucketsDB.pdb
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\BucketsDB.csproj.AssemblyReference.cache
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\BucketsDB.GeneratedMSBuildEditorConfig.editorconfig
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\BucketsDB.AssemblyInfoInputs.cache
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\BucketsDB.AssemblyInfo.cs
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\BucketsDB.csproj.CoreCompileInputs.cache
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\BucketsDB.dll
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\refint\BucketsDB.dll
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\BucketsDB.pdb
+E:\CSharp\BucketsDB\BucketsDB\obj\Debug\net7.0\ref\BucketsDB.dll
