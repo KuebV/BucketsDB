@@ -1,0 +1,18 @@
+# How many items can be placed into the specified bucket?
+MaxItems: 4
+
+# If the current bucket is filled, then the new item will be placed into a new bucket
+ManageOverflow: False
+
+# Current Overflow Bucket
+CurrentOverflowBucket: favMusic-overflow-3.bucket
+
+# Current Home Bucket
+HomeBucket: favMusic.bucket
+
+CreationDate: 1717018248
+
+IgnoreTypeCheck: False
+
+CurrentlyOverflowing: True
+

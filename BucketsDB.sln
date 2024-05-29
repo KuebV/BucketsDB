@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BucketsDB", "BucketsDB\BucketsDB.csproj", "{D82C1EB0-E11E-4F64-ACE2-30CF9BF01B70}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buckets.Tests", "Buckets.Tests\Buckets.Tests.csproj", "{A4DE397F-7DFB-4839-A7A9-1397963D545B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buckets.Example", "Buckets.Example\Buckets.Example.csproj", "{54FF9A46-D98B-413D-B12B-13343AC6A10E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{D82C1EB0-E11E-4F64-ACE2-30CF9BF01B70}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D82C1EB0-E11E-4F64-ACE2-30CF9BF01B70}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D82C1EB0-E11E-4F64-ACE2-30CF9BF01B70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4DE397F-7DFB-4839-A7A9-1397963D545B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4DE397F-7DFB-4839-A7A9-1397963D545B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4DE397F-7DFB-4839-A7A9-1397963D545B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4DE397F-7DFB-4839-A7A9-1397963D545B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54FF9A46-D98B-413D-B12B-13343AC6A10E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54FF9A46-D98B-413D-B12B-13343AC6A10E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54FF9A46-D98B-413D-B12B-13343AC6A10E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54FF9A46-D98B-413D-B12B-13343AC6A10E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
