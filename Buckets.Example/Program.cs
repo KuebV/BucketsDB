@@ -1,43 +1,55 @@
 ﻿using System.Text.Json;
-using Buckets.Example;
 using BucketsDB;
 
+public class Person 
+{
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public int Age { get; set; }
+    public double Balance { get; set; }
 
+}
 
-Bucket<Songs> _bucket = new Bucket<Songs>("favMusic", 4);
-_bucket.Init();
-        
-_bucket.Add(new Songs
+public class Program
 {
-    Name = "Cherry",
-    Artist = "Ratatat",
-    LastListened = 0,
-    Rating = 9
-});
-        
-_bucket.Add(new Songs
-{
-    Name = "Control",
-    Artist = "Aaron Taos",
-    LastListened = 0,
-    Rating = 10
-});
-        
-_bucket.Add(new Songs
-{
-    Name = "Rasputin",
-    Artist = "Boney M.",
-    LastListened = 0,
-    Rating = 8
-});
-        
-_bucket.Add(new Songs
-{
-    Name = "Troubleman",
-    Artist = "Electric Guest",
-    LastListened = 0,
-    Rating = 7
-});
+    private static Random _random;
+    private static Bucket<Person> bucket;
+    public static void Main(string[] args)
+    {
+        string[] firstNames = File.ReadAllLines("first-names.txt");
+        string[] lastNames = File.ReadAllLines("last-names.txt");
 
-Songs controlSong = _bucket.FindByKeyValue("Name", "Rasputin");
-Console.WriteLine(JsonSerializer.Serialize(controlSong));
+        _random = new Random();
+        
+        bucket = new Bucket<Person>("people", 16000);
+        bucket.Init();
+
+        /*for (int i = 0; i < 1600000; i++)
+        {
+            Person randPerson = new Person
+            {
+                FirstName = firstNames[_random.Next(0, firstNames.Length)],
+                LastName = lastNames[_random.Next(0, lastNames.Length)],
+                Age = _random.Next(18, 55),
+                Balance = _random.Next(0, 10000)
+            };
+
+            bucket.Add(randPerson);
+        }*/
+        
+        bucket.Close();
+
+        TimeAction();
+    }
+
+    private static void TimeAction()
+    {
+        long t1 = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+        //List<Person> peopleList = bucket.GetItems();
+        Person p1 = bucket.FindByKeyValue("Age", 22);
+        long t2 = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+        
+        Console.WriteLine($"{t2-t1}ms");
+
+    }
+}

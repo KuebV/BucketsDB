@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.ComponentModel;
+using System.IO.Compression;
 using System.Reflection;
+using System.Text;
 using BucketsDB.Property;
 
 namespace BucketsDB;
@@ -38,6 +40,8 @@ public class Bucket<T> where T : new()
     private string _bucketPath { get; set; }
 
     private bool beenInitalized;
+
+    private Stream _stream;
     
     public int Count { get; private set; }
 
@@ -80,8 +84,9 @@ public class Bucket<T> where T : new()
             using (StreamWriter sw = new StreamWriter(_bucketPath))
                 sw.Close();
 
-        beenInitalized = true;
+        _stream = File.Open(_bucketPath, FileMode.Append);
 
+        beenInitalized = true;
     }
 
     /// <summary>
@@ -94,30 +99,61 @@ public class Bucket<T> where T : new()
         if (!beenInitalized)
             throw new Exception("Bucket has not been initialized");
 
-        using (StreamWriter sw = new StreamWriter(_bucketPath, append: true))
+        PropertyInfo[] propertyInfo = obj.GetType().GetProperties();
+        int properties = propertyInfo.Length;
+        
+        using (BinaryWriter bin = new BinaryWriter(_stream, Encoding.UTF8, true))
         {
-            PropertyInfo[] propertyInfo = obj.GetType().GetProperties();
-            for (int i = 0; i < propertyInfo.Length; i++)
-            {
-                string line = "";
-                if (propertyInfo[i].PropertyType.IsArray)
-                {
-                    object? value = propertyInfo[i].GetValue(obj);
-                    if (value is IEnumerable enumerable)
-                        line = $"{propertyInfo[i].Name}0x00{string.Join("0xA1", enumerable.Cast<object>())}";
-                }
-                else
-                    line = $"{propertyInfo[i].Name}0x00{propertyInfo[i].GetValue(obj)}";
+            bin.Write((byte)properties); // Cast to 1 byte
 
-                sw.WriteLine(line);
+            for (int i = 0; i < properties; i++)
+            {
+                if (propertyInfo[i].PropertyType is { IsPrimitive: false, Name: "System.String" })
+                    throw new InvalidDataException($"{propertyInfo[i].Name} is not a primitive!");
+
+                string? value = propertyInfo[i].GetValue(obj).ToString();
+
+                TypeCode typeCode = Type.GetTypeCode(propertyInfo[i].PropertyType);
+                switch (typeCode)
+                {
+                    case TypeCode.Boolean:
+                        bin.Write(bool.Parse(value));
+                        break;
+                    case TypeCode.Byte:
+                        bin.Write(byte.Parse(value));
+                        break;
+                    case TypeCode.Char:
+                        bin.Write(char.Parse(value));
+                        break;
+                    case TypeCode.Decimal:
+                        bin.Write(decimal.Parse(value));
+                        break;
+                    case TypeCode.Double:
+                        bin.Write(double.Parse(value));
+                        break;
+                    case TypeCode.UInt16:
+                    case TypeCode.Int16:
+                        bin.Write(Int16.Parse(value));
+                        break;
+                    case TypeCode.UInt32:
+                    case TypeCode.Int32:
+                        bin.Write(Int32.Parse(value));
+                        break;
+                    case TypeCode.UInt64:
+                    case TypeCode.Int64:
+                        bin.Write(Int64.Parse(value));
+                        break;
+                    case TypeCode.String:
+                        bin.Write(value);
+                        break;
+                }
+
             }
-            sw.WriteLine("@");
-            sw.Close();
         }
 
         Count++;
 
-        if (Count >= MaxItems)
+        if (Count > MaxItems && _properties.ManageOverflow)
         {
             CreateOverflowBucket();
         }
@@ -125,10 +161,7 @@ public class Bucket<T> where T : new()
 
     public List<T> GetItems()
     {
-        List<FileInfo> buckets = new List<FileInfo> { new(_properties.HomeBucket) };
-        if (_properties.CurrentlyOverflowing)
-            foreach (FileInfo overflowBucket in GetOverflowBuckets())
-                buckets.Add(overflowBucket);
+        List<FileInfo> buckets = GetBuckets().ToList();
 
         List<T> totalCollection = new List<T>();
         foreach (FileInfo bucket in buckets)
@@ -137,84 +170,112 @@ public class Bucket<T> where T : new()
             for (int i = 0; i < items.Count; i++)
                 totalCollection.Add(items[i]);
         }
-
-        Console.WriteLine(totalCollection.Count);
+        
         return totalCollection;
     }
 
     private List<T> ReadFile<T>(FileInfo bucket) where T : new()
     {
-        string[] fileLines = File.ReadAllLines(bucket.Name);
-        int propertySize = typeof(T).GetProperties().Length;
-        int itemCount = fileLines.Length / propertySize;
-        int currentIndex = 0;
-        
-        List<T> objs = new List<T>();
-        for (int i = 0; i < itemCount; i++)
-            objs.Add(new T());
+        List<T> objList = new List<T>();
 
-        for (int i = 0; i < fileLines.Length; i++)
+        _stream = File.Open(bucket.FullName, FileMode.Open);
+        using (BinaryReader reader = new BinaryReader(_stream))
         {
-            if (string.IsNullOrEmpty(fileLines[i]))
-                continue;
-
-            if (fileLines[i].StartsWith("@"))
+            while (reader.PeekChar() != 0x01)
             {
-                currentIndex++;
-                continue;
+                T obj = new T();
+                PropertyInfo[] objProps = obj.GetType().GetProperties();
+
+                int propLength = 0;
+                try
+                {
+                    propLength = reader.ReadByte();
+                }
+                catch (EndOfStreamException ex)
+                {
+                    break;
+                }
+                if (propLength != typeof(T).GetProperties().Length)
+                    throw new InvalidDataException($"Property Mismatch!\n{obj.GetType().Name}({propLength}) - {obj.GetType().Name} ({typeof(T).GetProperties().Length})");
+
+                for (int i = 0; i < propLength; i++)
+                {
+                    TypeCode typeCode = Type.GetTypeCode(objProps[i].PropertyType);
+                    object? value = null;
+                    switch (typeCode)
+                    {
+                        case TypeCode.Boolean:
+                            value = reader.ReadBoolean();
+                            break;
+                        case TypeCode.Byte:
+                            value = reader.ReadByte();
+                            break;
+                        case TypeCode.Char:
+                            value = reader.ReadChar();
+                            break;
+                        case TypeCode.Decimal:
+                            value = reader.ReadDecimal();
+                            break;
+                        case TypeCode.Double:
+                            value = reader.ReadDouble();
+                            break;
+                        case TypeCode.UInt16:
+                        case TypeCode.Int16:
+                            value = reader.ReadInt16();
+                            break;
+                        case TypeCode.UInt32:
+                        case TypeCode.Int32:
+                            value = reader.ReadInt32();
+                            break;
+                        case TypeCode.UInt64:
+                        case TypeCode.Int64:
+                            value = reader.ReadInt64();
+                            break;
+                        case TypeCode.String:
+                            value = reader.ReadString();
+                            break;
+                        default:
+                            break;
+                    }
+
+                    objProps[i].SetValue(obj, value);
+                }
+
+                objList.Add(obj);
             }
-
-            int seperatorIndex = fileLines[i].IndexOf("0x00");
-            string key = fileLines[i].Substring(0, seperatorIndex);
-            string value = fileLines[i].Remove(0, key.Length + 4);
-            PropertyInfo correspondingProperty = typeof(T).GetProperty(key);
-
-            object? result = GetValue(correspondingProperty, value);
-            correspondingProperty.SetValue(objs[currentIndex], result);
         }
-
-        return objs;
         
+
+        return objList;
         
     }
 
     public T FindByKeyValue(string key, object? value)
     {
-        FileInfo[] buckets = GetBuckets();
-        string matchString = $"{key}0x00{value}";
-
-        T obj = new T();
-        
-        foreach (FileInfo bucket in buckets)
+        List<T> items = GetItems();
+        for (int i = 0; i < items.Count(); i++)
         {
-            string[] fileLines = File.ReadAllLines(bucket.FullName);
-            if (!fileLines.Contains(matchString)) // If the bucket doesn't contain KeyValuePair, we skip it.
-                continue;
+            PropertyInfo propertyInfo = items[i].GetType().GetProperty(key);
+            if (propertyInfo.GetValue(items[i]).Equals(value))
+                return items[i];
+        }
 
-            int indexOf = Array.IndexOf(fileLines, matchString);
-            int startOf = 0;
-
-            while (true)
-            {
-                indexOf--;
-                string line = fileLines[indexOf];
-                if (line.StartsWith("@"))
-                    break;
-            }
-
-            for (int i = indexOf + 1; i < (indexOf + typeof(T).GetProperties().Length); i++)
-            {
-                string foundKey = GetKeyFromRaw(fileLines[i]);
-                string foundValue = GetValueFromRaw(fileLines[i]);
-                
-                PropertyInfo correspondingProperty = typeof(T).GetProperty(foundKey);
-                object? result = GetValue(correspondingProperty, foundValue);
-                correspondingProperty.SetValue(obj, result);
-            }
-            
+        return new T();
+    }
+    
+    public List<T> FindMultipleByKeyValue(string key, object? value)
+    {
+        List<T> items = GetItems();
+        List<T> obj = new List<T>();
+        for (int i = 0; i < items.Count; i++)
+        {
+            PropertyInfo propertyInfo = items[i].GetType().GetProperty(key);
+            if (propertyInfo.GetValue(items[i]).Equals(value))
+                obj.Add(items[i]);
         }
 
         return obj;
+
     }
 
     /// <summary>
@@ -234,7 +295,7 @@ public class Bucket<T> where T : new()
 
         int bucketCount = 0;
         string bucketOverflowFile = "";
-        while (true)
+        while (true) // Realistically this shouldn't be an issue, but it's still rather risky
         {
             bucketOverflowFile = Path.Combine(getParentDirectory, $"{fileName}-overflow-{bucketCount}{fileExt}");
             if (!File.Exists(bucketOverflowFile))
@@ -293,4 +354,16 @@ public class Bucket<T> where T : new()
 
     private string GetValueFromRaw(string rawString)
         => rawString.Remove(0, GetKeyFromRaw(rawString).Length + 4);
+
+    public void Close()
+    {
+        _stream.Close();
+        _stream = File.Open(_bucketPath, FileMode.Append);
+        using (BinaryWriter writer = new BinaryWriter(_stream, Encoding.UTF8, false))
+        {
+            writer.Write(0x01);
+            writer.Close();
+        }
+        _stream.Close();
+    }
 }
